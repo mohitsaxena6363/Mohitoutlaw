@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Mohit Saxena Portal</title>
   <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet" />
   <style>
@@ -13,6 +13,8 @@
       background-color: #fafafa;
       color: #000;
       transition: background-color 0.3s, color 0.3s;
+      position: relative;
+      min-height: 100vh;
     }
     body.dark {
       background-color: #121212;
@@ -61,13 +63,30 @@
       transition: all 0.3s ease;
       box-shadow: 0 4px 14px rgba(0, 149, 246, 0.4);
     }
+    .continue-btn:hover {
+      background-color: #007acc;
+      box-shadow: 0 6px 18px rgba(0, 122, 204, 0.6);
+    }
     .login-box input {
       width: 100%;
       padding: 10px;
       margin: 8px 0;
-      border: 1px solid #ccc;
+      border: 1.5px solid #ccc;
       border-radius: 5px;
       font-size: 14px;
+      transition: border-color 0.3s;
+      background-color: white;
+      color: #000;
+    }
+    body.dark .login-box input {
+      background-color: #2a2a2a;
+      color: white;
+      border-color: #555;
+    }
+    .login-box input:focus {
+      border-color: #0095f6;
+      outline: none;
+      box-shadow: 0 0 5px #0095f6;
     }
     .login-btn {
       width: 100%;
@@ -79,19 +98,26 @@
       font-weight: bold;
       margin-top: 10px;
       cursor: pointer;
+      transition: background-color 0.3s ease;
+      box-shadow: 0 4px 12px rgba(0, 149, 246, 0.5);
+    }
+    .login-btn:hover {
+      background-color: #007acc;
     }
     .error {
       display: none;
-      color: red;
+      color: #ff5252;
       font-size: 13px;
       margin-top: 10px;
+      font-weight: 500;
     }
     .switch {
-      position: absolute;
+      position: fixed;
       top: 20px;
       right: 20px;
       width: 60px;
       height: 30px;
+      z-index: 1000;
     }
     .switch input {
       opacity: 0;
@@ -101,10 +127,7 @@
     .slider {
       position: absolute;
       cursor: pointer;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
+      top: 0; left: 0; right: 0; bottom: 0;
       background-color: #ccc;
       transition: 0.4s;
       border-radius: 30px;
@@ -131,16 +154,11 @@
       transform: translateX(30px);
       background-image: url('https://cdn-icons-png.flaticon.com/512/702/702455.png');
     }
-    body.dark input {
-      background-color: #2a2a2a;
-      color: white;
-      border-color: #555;
-    }
   </style>
 </head>
 <body>
-  <label class="switch">
-    <input type="checkbox" id="themeSwitch">
+  <label class="switch" title="Toggle Dark/Light Mode">
+    <input type="checkbox" id="themeSwitch" aria-label="Toggle Dark/Light Mode">
     <span class="slider"></span>
   </label>
 
@@ -148,19 +166,19 @@
   <audio id="loginSound" src="https://www.soundjay.com/buttons/sounds/button-10.mp3" preload="auto"></audio>
 
   <div class="main">
-    <div class="welcome active" id="welcomePage">
+    <div class="welcome active" id="welcomePage" role="region" aria-live="polite" aria-label="Welcome Message">
       <img src="https://cdn-icons-png.flaticon.com/512/174/174855.png" class="welcome-logo" alt="Logo" />
-      <h2 id="typed-text"></h2>
-      <button class="continue-btn" onclick="showLogin()">Continue</button>
+      <h2 id="typed-text" aria-atomic="true" aria-live="polite"></h2>
+      <button class="continue-btn" onclick="showLogin()" aria-label="Continue to login page">Continue</button>
     </div>
 
-    <div class="login-box" id="loginPage">
+    <div class="login-box" id="loginPage" role="region" aria-label="Login Form">
       <img src="https://cdn-icons-png.flaticon.com/512/174/174855.png" alt="Logo" style="width: 100px; margin-bottom: 20px;" />
-      <form onsubmit="login(event)">
-        <input type="text" id="username" placeholder="Username" required />
-        <input type="password" id="password" placeholder="Password" required />
-        <button type="submit" class="login-btn" onclick="document.getElementById('loginSound').play()">Log In</button>
-        <div class="error" id="error">Invalid username or password</div>
+      <form onsubmit="login(event)" novalidate>
+        <input type="text" id="username" placeholder="Username" required aria-required="true" aria-label="Username" />
+        <input type="password" id="password" placeholder="Password" required aria-required="true" aria-label="Password" />
+        <button type="submit" class="login-btn">Log In</button>
+        <div class="error" id="error" role="alert">Invalid username or password</div>
       </form>
     </div>
   </div>
@@ -169,8 +187,39 @@
     const text = "Welcome to Mohit Saxena's Portal";
     let index = 0;
 
+    let voiceUtterance;
+
+    function initVoices() {
+      const voices = speechSynthesis.getVoices();
+
+      // Try to get Google Assistant-like voice first
+      const googleAssistantVoice = voices.find(v =>
+        v.name.toLowerCase().includes('google') &&
+        v.lang.toLowerCase().startsWith('en') &&
+        (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('uk'))
+      );
+
+      // Fallback female voice
+      const femaleVoice = voices.find(v =>
+        v.name.toLowerCase().includes("female") ||
+        v.name.includes("Samantha") ||
+        v.name.includes("Microsoft Zira")
+      );
+
+      voiceUtterance = new SpeechSynthesisUtterance("Welcome to Mohit Saxena's Portal");
+      voiceUtterance.voice = googleAssistantVoice || femaleVoice || voices[0];
+      voiceUtterance.pitch = 1.2;
+      voiceUtterance.rate = 1;
+    }
+
+    function preloadVoice() {
+      if (!voiceUtterance) return;
+      speechSynthesis.speak(voiceUtterance);
+      setTimeout(() => speechSynthesis.cancel(), 100);
+    }
+
     window.addEventListener('load', () => {
-      // Theme load immediately
+      // Dark mode load
       const isDark = localStorage.getItem('theme') === 'dark';
       document.body.classList.toggle('dark', isDark);
       document.getElementById('themeSwitch').checked = isDark;
@@ -181,13 +230,19 @@
         localStorage.setItem('theme', checked ? 'dark' : 'light');
       });
 
-      // Typing effect start
-      typeEffect();
+      // Initialize voice and preload it
+      if (speechSynthesis.getVoices().length > 0) {
+        initVoices();
+        preloadVoice();
+      } else {
+        speechSynthesis.addEventListener('voiceschanged', () => {
+          initVoices();
+          preloadVoice();
+        });
+      }
 
-      // Preload voice
-      const voices = speechSynthesis.getVoices();
-      if (voices.length > 0) initVoices();
-      else speechSynthesis.addEventListener('voiceschanged', initVoices);
+      // Start typing effect
+      typeEffect();
     });
 
     function typeEffect() {
@@ -198,35 +253,28 @@
       }
     }
 
-    const voiceUtterance = new SpeechSynthesisUtterance("Welcome to Mohit Saxena's Portal");
-    function initVoices() {
-      const voices = speechSynthesis.getVoices();
-      const female = voices.find(v =>
-        v.name.toLowerCase().includes("female") ||
-        v.name.includes("Samantha") ||
-        v.name.includes("Google UK English Female") ||
-        v.name.includes("Microsoft Zira")
-      );
-      voiceUtterance.voice = female || voices[0];
-      voiceUtterance.pitch = 1.2;
-      voiceUtterance.rate = 1;
-    }
-
     function showLogin() {
       document.getElementById('clickSound').play();
       document.getElementById('welcomePage').classList.remove('active');
       document.getElementById('loginPage').classList.add('active');
+
       speechSynthesis.cancel();
-      speechSynthesis.speak(voiceUtterance);
+      setTimeout(() => {
+        if (voiceUtterance) speechSynthesis.speak(voiceUtterance);
+      }, 10);
     }
 
     function login(event) {
       event.preventDefault();
+      document.getElementById('loginSound').play();
       const username = document.getElementById('username').value.trim();
       const password = document.getElementById('password').value.trim();
       const error = document.getElementById('error');
       if (username === "Mohit" && password === "1234@63") {
-        window.location.href = "https://sites.google.com/view/mohitsaxenaoutlaw?usp=sharing";
+        error.style.display = 'none';
+        setTimeout(() => {
+          window.location.href = "https://sites.google.com/view/mohitsaxenaoutlaw?usp=sharing";
+        }, 300);
       } else {
         error.style.display = "block";
       }
